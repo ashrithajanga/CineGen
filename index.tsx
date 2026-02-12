@@ -7,7 +7,8 @@ import { GoogleGenAI } from "@google/genai";
 type Genre = "Thriller" | "Horror" | "Romance" | "Sci-Fi" | "Crime" | "Comedy" | "Drama" | "Action" | "Noir" | "Fantasy";
 type Tone = "Cinematic" | "Dark & Gritty" | "Emotional" | "Suspenseful" | "Psychological" | "Inspirational" | "Satirical";
 type Length = "Short Film" | "Medium Film" | "Feature Length";
-type ModelType = "Gemini 3 Pro" | "Llama 3.3 70B (Groq)";
+type ModelType = "Gemini 3 Pro" | "Gemini 3 Flash" | "Llama 3.3 70B (Groq)";
+type Language = "English" | "Spanish" | "French" | "German" | "Japanese" | "Korean" | "Chinese" | "Hindi" | "Italian" | "Portuguese";
 
 interface User {
   name: string;
@@ -28,9 +29,16 @@ interface Project {
   promptUsed: string;
 }
 
+interface SocialCampaign {
+  instagram: { caption: string; hashtags: string; imageIdea: string };
+  twitter: string[];
+  linkedin: string;
+  tiktok: string;
+}
+
 // --- Icons ---
 const Icons = {
-  Film: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 3v18"/><path d="M3 7.5h4"/><path d="M3 12h18"/><path d="M3 16.5h4"/><path d="M17 3v18"/><path d="M17 7.5h4"/><path d="M17 16.5h4"/></svg>,
+  Film: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 3v18"/><path d="M7 3v18"/><path d="M3 7.5h4"/><path d="M3 12h18"/><path d="M3 16.5h4"/><path d="M17 3v18"/><path d="M17 7.5h4"/><path d="M17 16.5h4"/></svg>,
   Feather: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"/><line x1="16" x2="2" y1="8" y2="22"/><line x1="17.5" x2="9" y1="15" y2="15"/></svg>,
   Rewrite: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 12"/><path d="M3 12h9"/><path d="M3 12l5-5"/></svg>,
   Archive: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg>,
@@ -44,6 +52,9 @@ const Icons = {
   Terminal: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>,
   ChevronLeft: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>,
   ChevronRight: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>,
+  Social: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg>,
+  Copy: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>,
+  Close: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>,
   CineGenLogo: () => (
     <svg viewBox="0 0 100 100" className="w-full h-full text-cinema-gold" fill="none" stroke="currentColor" strokeWidth="3">
        {/* Film Reel / Lens Abstract */}
@@ -320,10 +331,186 @@ const FeaturesSection = () => (
   </section>
 );
 
+// --- Settings Modal for Keys ---
+const SettingsModal = ({ onClose }: { onClose: () => void }) => {
+  const [groqKey, setGroqKey] = useState(localStorage.getItem('cwc_groq_key') || "");
+
+  const saveKeys = () => {
+  if (!groqKey || !groqKey.startsWith("gsk_")) {
+    alert("Enter a valid Groq API key.");
+    return;
+  }
+
+  localStorage.setItem('cwc_groq_key', groqKey.trim());
+  alert("Groq API key saved successfully.");
+  onClose();
+};
+
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center animate-fade-in backdrop-blur-sm">
+      <div className="glass-panel w-full max-w-md p-6 rounded-2xl relative">
+        <button onClick={onClose} className="absolute top-4 right-4 text-cinema-text/50 hover:text-white transition-colors">
+          <Icons.Close />
+        </button>
+        <h2 className="text-xl font-serif text-white mb-6 tracking-widest flex items-center gap-3">
+          <Icons.Settings /> STUDIO CONFIG
+        </h2>
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <label className="text-[10px] font-bold text-cinema-text/40 uppercase tracking-widest">Groq API Key (Llama 3.3)</label>
+            <input 
+              type="password"
+              value={groqKey} 
+              onChange={(e) => setGroqKey(e.target.value)} 
+              placeholder="gsk_..." 
+              className="w-full bg-black/40 border border-cinema-border rounded-lg px-4 py-3 text-sm text-white focus:border-cinema-gold focus:outline-none transition-all"
+            />
+            <p className="text-[10px] text-cinema-text/30">Key is stored locally in your browser.</p>
+          </div>
+          <button onClick={saveKeys} className="w-full bg-cinema-gold hover:bg-[#d4bf88] text-black font-bold py-3 rounded-lg transition-colors uppercase tracking-widest text-xs">
+            Save Configuration
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- AI Helper & Components ---
+
+const callAI = async (model: ModelType, prompt: string): Promise<any> => {
+
+  // GROQ
+  if (model === "Llama 3.3 70B (Groq)") {
+    const groqKey = process.env.VITE_GROQ_API_KEY || localStorage.getItem('cwc_groq_key');
+
+    if (!groqKey) throw new Error("Groq API Key missing. Check .env or settings.");
+
+    const response = await fetch(
+      "https://api.groq.com/openai/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${groqKey}`
+        },
+        body: JSON.stringify({
+          model: "llama-3.3-70b-versatile",
+          messages: [
+            { role: "system", content: "You are a professional cinematic screenplay writer and social media strategist. Return ONLY valid JSON." },
+            { role: "user", content: prompt }
+          ],
+          temperature: 0.7,
+          max_tokens: 2000
+        })
+      }
+    );
+
+    if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error?.message || "Groq Error");
+    }
+
+    const data = await response.json();
+    return JSON.parse(data.choices[0].message.content);
+  }
+
+  // GEMINI
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+  const targetModel =
+    model === "Gemini 3 Flash"
+      ? "gemini-3-flash-preview"
+      : "gemini-3-pro-preview";
+
+  const response = await ai.models.generateContent({
+    model: targetModel,
+    contents: prompt,
+    config: {
+      responseMimeType: "application/json"
+    }
+  });
+
+  const text = response.text;
+  if (!text) return {};
+  return JSON.parse(text);
+};
+
+const SelectGroup = ({ label, value, onChange, options }: { label: string, value: string, onChange: (v: any) => void, options: string[] }) => (
+  <div className="flex flex-col gap-2">
+    <label className="text-[10px] font-bold text-cinema-text/40 uppercase tracking-widest">{label}</label>
+    <div className="relative">
+      <select 
+        value={value} 
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full bg-black/40 border border-cinema-border rounded-xl px-4 py-3 text-sm text-white appearance-none focus:border-cinema-gold focus:outline-none transition-colors hover:bg-white/5 cursor-pointer"
+      >
+        {options.map(opt => <option key={opt} value={opt} className="bg-gray-900 text-white">{opt}</option>)}
+      </select>
+      <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-cinema-text/50">
+        <Icons.DownArrow />
+      </div>
+    </div>
+  </div>
+);
+
+const ArchiveView = () => {
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [selected, setSelected] = useState<Project | null>(null);
+
+  useEffect(() => {
+    setProjects(DB.getProjects());
+  }, []);
+
+  if (selected) {
+    return (
+      <div className="animate-fade-in">
+        <button onClick={() => setSelected(null)} className="mb-6 flex items-center gap-2 text-cinema-gold text-xs uppercase tracking-widest hover:text-white transition-colors">
+           <Icons.ChevronLeft /> Back to Archive
+        </button>
+        <ResultDeck project={selected} onUpdateProject={(updated) => {
+           const newProjects = projects.map(p => p.id === updated.id ? updated : p);
+           setProjects(newProjects);
+           DB.setProjects(newProjects);
+           setSelected(updated);
+        }} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {projects.length === 0 && (
+        <div className="col-span-full text-center py-20 text-cinema-text/40 text-sm font-mono border border-dashed border-white/10 rounded-xl">
+           No projects archived yet. Start creating in the Scene Generator.
+        </div>
+      )}
+      {projects.map((p) => (
+        <div key={p.id} onClick={() => setSelected(p)} className="glass-panel p-6 rounded-xl border border-white/5 cursor-pointer hover:border-cinema-gold/30 hover:-translate-y-1 transition-all group relative overflow-hidden">
+           <div className="absolute inset-0 bg-gradient-to-br from-cinema-gold/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+           <div className="relative z-10">
+             <div className="flex justify-between items-start mb-4">
+                <span className="text-[10px] font-bold text-cinema-gold uppercase tracking-widest border border-cinema-gold/20 px-2 py-1 rounded">{p.genre}</span>
+                <span className="text-[10px] text-cinema-text/40 font-mono">{new Date(p.timestamp).toLocaleDateString()}</span>
+             </div>
+             <h3 className="text-xl font-serif text-white mb-2 group-hover:text-cinema-gold transition-colors truncate">{p.title}</h3>
+             <p className="text-xs text-cinema-text/50 mb-4 line-clamp-2">{p.length} • {p.tone}</p>
+             <div className="flex items-center gap-2 text-[10px] text-cinema-text/30 font-bold uppercase tracking-widest group-hover:text-white transition-colors">
+                Open Project <Icons.ChevronRight />
+             </div>
+           </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 // --- MAIN STUDIO ---
 const Studio = ({ user, onLogout }: { user: User, onLogout: () => void }) => {
-  const [selectedModel, setSelectedModel] = useState<ModelType>("Gemini 3 Pro");
+  const [selectedModel, setSelectedModel] = useState<ModelType>("Llama 3.3 70B (Groq)");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     const observer = new IntersectionObserver((entries) => {
@@ -338,6 +525,8 @@ const Studio = ({ user, onLogout }: { user: User, onLogout: () => void }) => {
 
   return (
     <div className="flex bg-transparent font-sans min-h-screen">
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+      
       {/* Sidebar - Collapsible with Smooth Transition */}
       <aside 
         className={`fixed h-full z-40 backdrop-blur-xl flex flex-col bg-cinema-glass border-r border-cinema-border sidebar-transition ${isSidebarOpen ? 'w-72' : 'w-20'}`}
@@ -361,7 +550,17 @@ const Studio = ({ user, onLogout }: { user: User, onLogout: () => void }) => {
           {isSidebarOpen && <p className="text-[10px] text-cinema-text/30 font-bold uppercase tracking-widest mb-2 pl-4 animate-fade-in">Navigation</p>}
           <NavAnchor href="#write" icon={<Icons.Feather />} label="Fresh Screenplay" collapsed={!isSidebarOpen} />
           <NavAnchor href="#rewrite" icon={<Icons.Rewrite />} label="Script Doctor" collapsed={!isSidebarOpen} />
+          <NavAnchor href="#social" icon={<Icons.Social />} label="Social Campaign" collapsed={!isSidebarOpen} />
           <NavAnchor href="#archive" icon={<Icons.Archive />} label="Project Archive" collapsed={!isSidebarOpen} />
+          
+          <button 
+             onClick={() => setShowSettings(true)}
+             className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all group duration-300 text-cinema-text/60 hover:text-white hover:bg-white/5 hover:text-cinema-gold ${!isSidebarOpen ? 'justify-center' : 'justify-start hover:pl-5'}`}
+          >
+             <div className="group-hover:rotate-45 transition-transform duration-500 flex-shrink-0"><Icons.Settings /></div>
+             <span className={`text-[11px] font-bold uppercase tracking-widest whitespace-nowrap overflow-hidden transition-all duration-300 ${!isSidebarOpen ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>Settings</span>
+          </button>
+          
           <div className="h-4"></div>
         </nav>
         
@@ -409,6 +608,15 @@ const Studio = ({ user, onLogout }: { user: User, onLogout: () => void }) => {
               <RewriteEngine model={selectedModel} />
            </section>
 
+           {/* SOCIAL MEDIA SECTION */}
+           <section id="social" className="section-cube-reveal min-h-screen pt-20">
+              <div className="flex items-center justify-between mb-12 border-b border-white/10 pb-6">
+                 <h2 className="text-4xl font-serif text-white tracking-widest">SOCIAL CAMPAIGN GENERATOR</h2>
+                 <ModelSelector selected={selectedModel} onSelect={setSelectedModel} />
+              </div>
+              <SocialMediaEngine model={selectedModel} />
+           </section>
+
            {/* ARCHIVE SECTION */}
            <section id="archive" className="section-cube-reveal min-h-screen pt-20">
               <h2 className="text-4xl font-serif text-white tracking-widest mb-12 border-b border-white/10 pb-6">PROJECT ARCHIVES</h2>
@@ -433,11 +641,165 @@ const ModelSelector = ({ selected, onSelect }: { selected: ModelType, onSelect: 
   <div className="flex items-center gap-4">
     <span className="hidden md:block text-[10px] font-bold text-cinema-text/40 uppercase tracking-widest:">AI Model:</span>
     <div className="flex bg-black/40 rounded-lg p-1 border border-cinema-border">
-       <button onClick={() => onSelect("Gemini 3 Pro")} className={`px-4 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider transition-all ${selected === "Gemini 3 Pro" ? 'bg-cinema-accent text-white shadow-lg' : 'text-cinema-text/50 hover:text-white'}`}>Gemini</button>
+       <button onClick={() => onSelect("Gemini 3 Pro")} className={`px-4 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider transition-all ${selected === "Gemini 3 Pro" ? 'bg-cinema-accent text-white shadow-lg' : 'text-cinema-text/50 hover:text-white'}`}>Gemini Pro</button>
+       <button onClick={() => onSelect("Gemini 3 Flash")} className={`px-4 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider transition-all ${selected === "Gemini 3 Flash" ? 'bg-cyan-600 text-white shadow-lg' : 'text-cinema-text/50 hover:text-white'}`}>Gemini Flash</button>
        <button onClick={() => onSelect("Llama 3.3 70B (Groq)")} className={`px-4 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider transition-all ${selected === "Llama 3.3 70B (Groq)" ? 'bg-cinema-gold text-black shadow-lg' : 'text-cinema-text/50 hover:text-white'}`}>Llama 3.3</button>
     </div>
   </div>
 );
+
+// --- 3. Social Media Engine (NEW) ---
+const SocialMediaEngine = ({ model }: { model: ModelType }) => {
+  const [topic, setTopic] = useState("");
+  const [language, setLanguage] = useState<Language>("English");
+  const [loading, setLoading] = useState(false);
+  const [campaign, setCampaign] = useState<SocialCampaign | null>(null);
+  const [error, setError] = useState("");
+
+  const handleGenerate = async () => {
+    if (!topic) { setError("Topic is required."); return; }
+    setError("");
+    setLoading(true);
+    setCampaign(null);
+
+    const prompt = `
+      You are an expert Social Media Strategist and Content Creator.
+      Create a comprehensive social media campaign about: "${topic}".
+      Language: ${language}.
+
+      Requirements:
+      1. INSTAGRAM: A catchy caption, 15+ relevant hashtags, and a detailed description for an image to generate.
+      2. TWITTER (X): A thread of 3-5 engaging tweets.
+      3. LINKEDIN: A professional, value-driven post suitable for a business network.
+      4. TIKTOK / REELS: A creative 30-second video script with visual cues and dialogue/narration.
+
+      Output strictly valid JSON with this structure:
+      {
+        "instagram": { "caption": "string", "hashtags": "string", "imageIdea": "string" },
+        "twitter": ["string", "string", ...],
+        "linkedin": "string",
+        "tiktok": "string"
+      }
+    `;
+
+    try {
+      const [data] = await Promise.all([
+        callAI(model, prompt),
+        new Promise(resolve => setTimeout(resolve, 2000)) // Cinematic pause
+      ]);
+      setCampaign(data);
+    } catch (e: any) {
+      setError("Campaign Generation Failed: " + e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="max-w-6xl mx-auto space-y-10">
+      {loading && <CinematicRevealOverlay />}
+
+      {/* Input Section */}
+      <div className="glass-panel p-8 rounded-2xl border-t border-white/10 relative overflow-hidden group hover:border-cinema-gold/20 transition-all duration-700">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative z-10">
+          <div className="md:col-span-2 space-y-4">
+             <h3 className="text-xs font-bold text-cinema-gold uppercase tracking-widest mb-2 flex items-center gap-2"><Icons.Social /> Topic / Core Idea</h3>
+             <textarea 
+               value={topic} 
+               onChange={e => setTopic(e.target.value)} 
+               placeholder="e.g. The launch of our new sci-fi movie, 'Starfall'..." 
+               className="w-full h-32 bg-black/40 border border-cinema-border rounded-xl p-5 text-white text-sm font-sans focus:border-cinema-gold focus:outline-none transition-all resize-none leading-relaxed" 
+             />
+          </div>
+          <div className="space-y-6 flex flex-col justify-end">
+             <SelectGroup 
+               label="Target Language" 
+               value={language} 
+               onChange={setLanguage} 
+               options={["English", "Spanish", "French", "German", "Japanese", "Korean", "Chinese", "Hindi", "Italian", "Portuguese"]} 
+             />
+             <button 
+               onClick={handleGenerate} 
+               disabled={loading} 
+               className="w-full py-4 bg-gradient-to-r from-cinema-accent to-[#6040d0] rounded-xl text-white font-bold text-xs uppercase tracking-[0.2em] hover:shadow-[0_0_30px_rgba(124,92,255,0.4)] transition-all transform hover:-translate-y-1 disabled:opacity-50"
+             >
+               Generate Campaign
+             </button>
+          </div>
+        </div>
+        {error && <div className="mt-6 p-4 bg-red-900/20 border border-red-500/30 text-red-300 text-xs font-mono rounded-lg">{error}</div>}
+      </div>
+
+      {/* Results Section */}
+      {campaign && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-slide-up">
+          
+          {/* Instagram */}
+          <div className="glass-panel p-0 rounded-xl overflow-hidden border border-white/10 hover:border-pink-500/30 transition-colors">
+             <div className="bg-gradient-to-r from-purple-900/40 to-pink-900/40 px-6 py-4 border-b border-white/5 flex justify-between items-center">
+                <span className="text-xs font-bold uppercase tracking-widest text-pink-300">Instagram</span>
+             </div>
+             <div className="p-6 space-y-4">
+                <div>
+                   <label className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Caption</label>
+                   <p className="text-sm text-gray-300 mt-1 whitespace-pre-wrap">{campaign.instagram.caption}</p>
+                </div>
+                <div>
+                   <label className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Hashtags</label>
+                   <p className="text-xs text-cinema-accent mt-1">{campaign.instagram.hashtags}</p>
+                </div>
+                <div className="bg-white/5 p-4 rounded-lg border border-white/5">
+                   <label className="text-[10px] text-cinema-gold uppercase tracking-widest font-bold flex items-center gap-2"><Icons.Film /> Image Concept</label>
+                   <p className="text-xs text-gray-400 mt-1 italic">{campaign.instagram.imageIdea}</p>
+                </div>
+             </div>
+          </div>
+
+          {/* Twitter Thread */}
+          <div className="glass-panel p-0 rounded-xl overflow-hidden border border-white/10 hover:border-blue-500/30 transition-colors">
+             <div className="bg-gradient-to-r from-blue-900/40 to-cyan-900/40 px-6 py-4 border-b border-white/5 flex justify-between items-center">
+                <span className="text-xs font-bold uppercase tracking-widest text-blue-300">Twitter / X Thread</span>
+             </div>
+             <div className="p-6 space-y-6">
+                {campaign.twitter.map((tweet, i) => (
+                  <div key={i} className="flex gap-4">
+                     <div className="flex flex-col items-center">
+                        <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-bold text-white">{i+1}</div>
+                        {i < campaign.twitter.length - 1 && <div className="w-0.5 flex-1 bg-white/10 my-1"></div>}
+                     </div>
+                     <p className="text-sm text-gray-300 pt-0.5">{tweet}</p>
+                  </div>
+                ))}
+             </div>
+          </div>
+
+          {/* LinkedIn */}
+          <div className="glass-panel p-0 rounded-xl overflow-hidden border border-white/10 hover:border-blue-700/30 transition-colors">
+             <div className="bg-gradient-to-r from-blue-950/40 to-indigo-900/40 px-6 py-4 border-b border-white/5 flex justify-between items-center">
+                <span className="text-xs font-bold uppercase tracking-widest text-indigo-300">LinkedIn Professional</span>
+             </div>
+             <div className="p-6">
+                <p className="text-sm text-gray-300 whitespace-pre-wrap leading-relaxed">{campaign.linkedin}</p>
+             </div>
+          </div>
+
+           {/* TikTok */}
+           <div className="glass-panel p-0 rounded-xl overflow-hidden border border-white/10 hover:border-teal-500/30 transition-colors">
+             <div className="bg-gradient-to-r from-teal-900/40 to-emerald-900/40 px-6 py-4 border-b border-white/5 flex justify-between items-center">
+                <span className="text-xs font-bold uppercase tracking-widest text-teal-300">TikTok / Reels Script</span>
+             </div>
+             <div className="p-6">
+                <div className="font-mono text-xs text-gray-400 whitespace-pre-wrap leading-relaxed bg-black/20 p-4 rounded-lg border border-white/5">
+                  {campaign.tiktok}
+                </div>
+             </div>
+          </div>
+
+        </div>
+      )}
+    </div>
+  );
+};
 
 // --- 1. Fresh Writer Engine ---
 const WriterEngine = ({ model }: { model: ModelType }) => {
@@ -445,6 +807,7 @@ const WriterEngine = ({ model }: { model: ModelType }) => {
   const [genre, setGenre] = useState<Genre>("Thriller");
   const [tone, setTone] = useState<Tone>("Cinematic");
   const [length, setLength] = useState<Length>("Short Film");
+  const [language, setLanguage] = useState<Language>("English");
   
   const [loading, setLoading] = useState(false);
   const [project, setProject] = useState<Project | null>(null);
@@ -459,6 +822,7 @@ const WriterEngine = ({ model }: { model: ModelType }) => {
     const prompt = `
       You are an award-winning Hollywood Screenwriter and Sound Designer.
       Generate a ${length} ${genre} film in ${tone} tone.
+      Language: ${language}.
       Concept: "${title}"
       Requirements:
       1. INDUSTRY SCREENPLAY: Standard formatting (INT./EXT.). Cinematic action. Natural dialogue.
@@ -509,13 +873,19 @@ const WriterEngine = ({ model }: { model: ModelType }) => {
                 <SelectGroup label="Genre" value={genre} onChange={setGenre} options={["Thriller", "Comedy", "Horror", "Romance", "Sci-Fi", "Crime", "Drama", "Action", "Noir", "Fantasy"]} />
                 <SelectGroup label="Length" value={length} onChange={setLength} options={["Short Film", "Medium Film", "Feature Length"]} />
              </div>
-             <div>
-               <label className="block text-[10px] font-bold text-cinema-text/40 uppercase tracking-widest mb-3">Tone</label>
-               <div className="flex flex-wrap gap-2">
-                 {["Cinematic", "Dark & Gritty", "Emotional", "Suspenseful", "Psychological"].map(t => (
-                   <button key={t} onClick={() => setTone(t as Tone)} className={`px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider border transition-all ${tone === t ? 'bg-white/10 text-white border-white/40' : 'border-cinema-border text-cinema-text/40 hover:border-white/20'}`}>{t}</button>
-                 ))}
-               </div>
+             <div className="grid grid-cols-2 gap-6">
+                <SelectGroup 
+                   label="Language" 
+                   value={language} 
+                   onChange={setLanguage} 
+                   options={["English", "Spanish", "French", "German", "Japanese", "Korean", "Chinese", "Hindi", "Italian", "Portuguese"]} 
+                 />
+                <div>
+                   <label className="block text-[10px] font-bold text-cinema-text/40 uppercase tracking-widest mb-3">Tone</label>
+                   <select value={tone} onChange={e => setTone(e.target.value as Tone)} className="w-full bg-black/40 border border-cinema-border rounded-xl px-4 py-3 text-sm text-white appearance-none focus:border-cinema-gold focus:outline-none">
+                     {["Cinematic", "Dark & Gritty", "Emotional", "Suspenseful", "Psychological", "Inspirational", "Satirical"].map(t => <option key={t} value={t}>{t}</option>)}
+                   </select>
+                </div>
              </div>
              <button onClick={handleGenerate} disabled={loading} className="w-full py-5 bg-gradient-to-r from-cinema-accent to-[#6040d0] rounded-xl text-white font-bold text-sm uppercase tracking-[0.2em] hover:shadow-[0_0_30px_rgba(124,92,255,0.4)] transition-all transform hover:-translate-y-1 disabled:opacity-50">Generate Blueprint</button>
           </div>
@@ -532,6 +902,7 @@ const WriterEngine = ({ model }: { model: ModelType }) => {
 const RewriteEngine = ({ model }: { model: ModelType }) => {
   const [script, setScript] = useState("");
   const [instructions, setInstructions] = useState("");
+  const [language, setLanguage] = useState<Language>("English");
   const [loading, setLoading] = useState(false);
   const [project, setProject] = useState<Project | null>(null);
   const [error, setError] = useState("");
@@ -585,6 +956,7 @@ const RewriteEngine = ({ model }: { model: ModelType }) => {
     const prompt = `
       You are an expert Script Doctor.
       Rewrite the following screenplay segment based on these instructions: "${instructions}"
+      Output Language: ${language}.
       
       ORIGINAL SCRIPT:
       ${script}
@@ -653,9 +1025,17 @@ const RewriteEngine = ({ model }: { model: ModelType }) => {
             <textarea value={script} onChange={e => setScript(e.target.value)} placeholder="Paste screenplay here or upload a file..." className="w-full h-64 bg-black/40 border border-cinema-border rounded-xl p-5 text-white text-xs font-mono focus:border-cinema-gold focus:outline-none transition-all resize-none leading-relaxed custom-scrollbar" />
           </div>
           <div className="space-y-8 flex flex-col h-full">
-             <div className="flex-1">
-               <h3 className="text-xs font-bold text-cinema-gold uppercase tracking-widest mb-3"><Icons.Rewrite /> Doctor's Notes</h3>
-               <textarea value={instructions} onChange={e => setInstructions(e.target.value)} placeholder="Instructions: e.g. 'Make the dialogue snappier', 'Change setting to 1980s Miami'..." className="w-full h-32 bg-black/40 border border-cinema-border rounded-xl p-5 text-white text-sm font-sans focus:border-cinema-gold focus:outline-none transition-all resize-none leading-relaxed" />
+             <div className="flex-1 space-y-4">
+               <div>
+                  <h3 className="text-xs font-bold text-cinema-gold uppercase tracking-widest mb-3"><Icons.Rewrite /> Doctor's Notes</h3>
+                  <textarea value={instructions} onChange={e => setInstructions(e.target.value)} placeholder="Instructions: e.g. 'Make the dialogue snappier', 'Change setting to 1980s Miami'..." className="w-full h-32 bg-black/40 border border-cinema-border rounded-xl p-5 text-white text-sm font-sans focus:border-cinema-gold focus:outline-none transition-all resize-none leading-relaxed" />
+               </div>
+               <SelectGroup 
+                   label="Output Language" 
+                   value={language} 
+                   onChange={setLanguage} 
+                   options={["English", "Spanish", "French", "German", "Japanese", "Korean", "Chinese", "Hindi", "Italian", "Portuguese"]} 
+               />
              </div>
              <button onClick={handleRewrite} disabled={loading} className="w-full py-5 bg-gradient-to-r from-cinema-accent to-[#6040d0] rounded-xl text-white font-bold text-sm uppercase tracking-[0.2em] hover:shadow-[0_0_30px_rgba(124,92,255,0.4)] transition-all transform hover:-translate-y-1 disabled:opacity-50">Rewrite Script</button>
           </div>
@@ -828,41 +1208,7 @@ const ResultDeck = ({ project, onUpdateProject }: { project: Project, onUpdatePr
   );
 };
 
-// --- Archive View ---
-const ArchiveView = () => {
-  const [projects, setProjects] = useState<Project[]>([]);
-  useEffect(() => { setProjects(DB.getProjects()); }, []);
-  if (projects.length === 0) return <div className="text-center py-20 text-cinema-text/30 font-serif tracking-widest">VAULT EMPTY</div>;
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-       {projects.map(p => (
-          <div key={p.id} className="glass-panel p-6 rounded-xl border border-white/5 hover:border-cinema-gold/50 transition-all hover:-translate-y-1 group duration-500 hover:shadow-[0_0_30px_rgba(184,155,94,0.1)]">
-             <div className="flex justify-between items-start mb-4">
-                <span className="text-[10px] font-mono text-cinema-gold">{p.timestamp}</span>
-                <span className="text-[10px] bg-white/10 px-2 py-0.5 rounded text-white/60">{p.model.split(" ")[0]}</span>
-             </div>
-             <h4 className="text-lg font-serif text-white mb-2 group-hover:text-cinema-gold transition-colors truncate">{p.title}</h4>
-             <p className="text-xs text-cinema-text/50 mb-6 uppercase tracking-wider">{p.genre} • {p.length}</p>
-             <button onClick={() => generatePDF(p)} className="w-full py-2 border border-white/10 rounded text-[10px] font-bold uppercase tracking-widest hover:bg-white/5 transition-colors">Download Script</button>
-          </div>
-       ))}
-    </div>
-  );
-};
-
-// --- Helpers ---
-const SelectGroup = ({ label, value, onChange, options }: any) => (
-  <div>
-    <label className="block text-[10px] font-bold text-cinema-text/40 uppercase tracking-widest mb-3">{label}</label>
-    <div className="relative">
-      <select value={value} onChange={e => onChange(e.target.value)} className="w-full bg-black/40 border border-cinema-border rounded-xl px-4 py-3 text-sm text-white appearance-none focus:border-cinema-gold focus:outline-none">
-        {options.map((o: string) => <option key={o} value={o}>{o}</option>)}
-      </select>
-      <div className="absolute right-4 top-4 pointer-events-none text-cinema-text/30 text-xs">▼</div>
-    </div>
-  </div>
-);
-
+// --- Auth Component (Handles persistent credentials) ---
 const Auth = ({ onLogin }: { onLogin: (u: User) => void }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
@@ -873,6 +1219,7 @@ const Auth = ({ onLogin }: { onLogin: (u: User) => void }) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (isLogin) {
+      // Credentials check against stored user data
       const res = DB.login(email, pass);
       if (res.success) onLogin(res.user); else setError(res.msg || "Error");
     } else {
@@ -908,35 +1255,6 @@ const Auth = ({ onLogin }: { onLogin: (u: User) => void }) => {
   );
 };
 
-// --- AI API CALLER ---
-const callAI = async (model: ModelType, prompt: string): Promise<{ screenplay: string, characters: string, soundDesign: string }> => {
-  let jsonStr = "";
-
-  if (model === "Gemini 3 Pro") {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const response = await ai.models.generateContent({
-      model: "gemini-3-pro-preview",
-      contents: prompt,
-      config: { responseMimeType: "application/json" },
-    });
-    jsonStr = response.text || "{}";
-  } else {
-    // Llama via Groq
-    const groqKey = process.env.GROQ_API_KEY;
-    if (!groqKey) throw new Error("Groq API Key missing in environment variables.");
-    
-    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: { "Authorization": `Bearer ${groqKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ messages: [{ role: "user", content: prompt + "\n\nRESPOND ONLY WITH VALID JSON." }], model: "llama-3.3-70b-versatile", response_format: { type: "json_object" } })
-    });
-    if (!res.ok) throw new Error("Groq API Error: " + res.statusText);
-    const data = await res.json();
-    jsonStr = data.choices[0]?.message?.content || "{}";
-  }
-  return JSON.parse(jsonStr);
-};
-
 const root = createRoot(document.getElementById("root")!);
 root.render(<React.StrictMode><App /></React.StrictMode>);
 
@@ -945,6 +1263,7 @@ function App() {
   const [showIntro, setShowIntro] = useState(false);
 
   useEffect(() => {
+    // Session persistence check
     const saved = localStorage.getItem('cwc_session');
     if (saved) setUser(JSON.parse(saved));
   }, []);
